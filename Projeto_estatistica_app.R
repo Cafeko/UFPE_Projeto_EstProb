@@ -3,23 +3,32 @@ library(shiny)
 library(dplyr)
 
 
+# Dados:
 df <- read.csv("annual_deaths_by_causes.csv")
-# View(deaths_df)
-
+anos <- sort(c(unique(df$year)))
+pais <- sort(unique(df$country))
+mortes <- colnames(df[c(-1,-2,-3)])
+mortes_alfabetica <- sort(mortes)
+mortes_alfabetica
 
 # Funções:
 FiltraDados <- function(dados, ano_inicio, ano_fim, pais, morte_causa){
-  dados_filtrados <- dados[(dados$year >= ano_inicio & dados$year <= ano_fim), 3 + which(mortes == morte_causa)]
+  dados_filtrados <- dados[(dados$year >= ano_inicio & dados$year <= ano_fim &
+                            dados$country == pais), 3 + which(mortes == morte_causa)]
   
   return(dados_filtrados)
 }
 
 MontaTabela <- function(dados, ano_inicio, ano_fim, pais, morte_causa){
   dados_filtrados <- FiltraDados(dados, ano_inicio, ano_fim, pais, morte_causa)
-  dados_filtrados <- dados_filtrados[!is.na(dados_filtrados)]
-  tabela <- data.frame(Classe = morte_causa, media = mean(dados_filtrados),
-                       moda = getmode(c('Sem Moda', dados_filtrados)),
-                       mediana = median(dados_filtrados))
+  moda_dados <- 
+  tabela <- data.frame(Classe = morte_causa,
+                       Media = mean(dados_filtrados),
+                       Moda = getmode(c('Sem Moda', dados_filtrados)),
+                       Mediana = median(dados_filtrados),
+                       Desvio_Padrao = sd(dados_filtrados),
+                       Maximo = max(dados_filtrados),
+                       Minimo = min(dados_filtrados))
   return(tabela)
 }
 
@@ -28,22 +37,28 @@ getmode <- function(v) {
   uniqv[which.max(tabulate(match(v, uniqv)))]
 }
 
-
-anos <- sort(c(unique(df$year)))
-pais <- c(unique(df$country))
-mortes <- c(colnames(df))[c(-1,-2,-3)]
+FormataModa <- function(dados) {
+  if (length(dados) > 1) {
+    return(c('Sem Moda', dados))
+  }
+  else {
+    return(dados)
+  }
+}
 
 
 # UI:
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Old Faithful Geyser Data"),
+    titlePanel("Numero de mortes"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            
+          selectInput('idPais', 'País:', choices = pais, selected = 'Brazil'),
+          selectInput('idMortes', 'Causa de mortes:', choices = mortes_alfabetica, selected = 'road_injuries'),
+          actionButton('idBotaoFiltro', 'Filtrar')
         ),
 
         # Show a plot of the generated distribution
@@ -55,9 +70,13 @@ ui <- fluidPage(
 
 # Server:
 server <- function(input, output) {
-    tabela <- MontaTabela(df, anos[1], anos[30], pais[1], mortes[1])
+    tabela <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
+        MontaTabela(df, anos[1], anos[30], input$idPais, input$idMortes)
+    })
     
-    output$TabelaDados <- renderTable(tabela)
+    output$TabelaDados <- renderTable(tabela())
+    
+    
 }
 
 # Executa o app:
