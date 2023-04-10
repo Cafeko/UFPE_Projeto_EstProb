@@ -62,9 +62,7 @@ ui <- fluidPage(
         sidebarPanel(
           selectInput('idPais', 'País:', choices = pais, selected = 'Brazil'),
           selectInput('idMortes', 'Causa de mortes:', choices = mortes_alfabetica, selected = 'road_injuries'),
-          sliderInput("idAno",
-                      label = "ANO",
-                      min = 1990, max = 2019, value = c(1990, 2000), sep = ''),
+          sliderInput('idAnos', 'Anos:', min = min(anos), max = max(anos), value = c(min(anos), max(anos)), sep = ""),
           actionButton('idBotaoFiltro', 'Filtrar')
         ),
 
@@ -80,7 +78,7 @@ ui <- fluidPage(
 # Server:
 server <- function(input, output) {
     dados_filtrados <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
-      return(df[df$country == input$idPais & df$year >= input$idAno[1] & df$year <= input$idAno[2],])
+      return(df[df$country == input$idPais & df$year >= input$idAnos[1] & df$year <= input$idAnos[2],])
     })
     
     Morte_selecionado <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
