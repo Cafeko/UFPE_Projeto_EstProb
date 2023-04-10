@@ -12,17 +12,16 @@ mortes <- colnames(df[c(-1,-2,-3)])
 mortes_alfabetica <- sort(mortes)
 mortes_alfabetica
 
+
 # Funções:
-FiltraDados <- function(dados, ano_inicio, ano_fim, pais, morte_causa){
-  dados_filtrados <- dados[(dados$year >= ano_inicio & dados$year <= ano_fim &
-                            dados$country == pais), ColunaMorte(morte_causa)]
+FiltraDados <- function(dados, morte_causa){
+  dados_filtrados <- dados[, ColunaMorte(morte_causa)]
   
   return(dados_filtrados)
 }
 
-MontaTabela <- function(dados, ano_inicio, ano_fim, pais, morte_causa){
-  dados_filtrados <- FiltraDados(dados, ano_inicio, ano_fim, pais, morte_causa)
-  moda_dados <- 
+MontaTabela <- function(dados, morte_causa){
+  dados_filtrados <- FiltraDados(dados, morte_causa)
   tabela <- data.frame(Classe = morte_causa,
                        Media = mean(dados_filtrados),
                        Moda = getmode(c('Sem Moda', dados_filtrados)),
@@ -63,6 +62,8 @@ ui <- fluidPage(
         sidebarPanel(
           selectInput('idPais', 'País:', choices = pais, selected = 'Brazil'),
           selectInput('idMortes', 'Causa de mortes:', choices = mortes_alfabetica, selected = 'road_injuries'),
+          selectInput('idAnoInicio', 'Ano de inicio:', choices = anos, selected = anos[1]),
+          selectInput('idAnoFim', 'Ano de Fim:', choices = anos[anos >= ano_inicio], selected = anos[length((anos))]),
           actionButton('idBotaoFiltro', 'Filtrar')
         ),
 
@@ -76,22 +77,23 @@ ui <- fluidPage(
 
 # Server:
 server <- function(input, output) {
+    dados_filtrados <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
+      return(df[df$country == input$idPais & df$year >= input$idAnoInicio & df$year <= input$idAnoFim,])
+    })
+    
     Morte_selecionado <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
       return(input$idMortes)
     })
     
-    pais_selecionado <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
-      return(input$idPais)
-    })
-    
+    ano_inicio <- reactive(input$idAnoInicio)
+
     tabela <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
-        MontaTabela(df, anos[1], anos[30], input$idPais, input$idMortes)
+        MontaTabela(dados_filtrados(), input$idMortes)
     })
-    
-    
+
+        
     output$GraficoLinha <- renderPlot({
-      df_filtrado <- df[df$country == pais_selecionado(),]
-      ggplot(df_filtrado, aes(x=year, y=df_filtrado[, ColunaMorte(Morte_selecionado())])) +
+      ggplot(dados_filtrados(), aes(x=year, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())])) +
         geom_line() + labs(title="Grafico de linha:", x = "Ano", y = "Causa da morte")
     })
     
