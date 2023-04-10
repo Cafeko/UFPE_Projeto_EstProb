@@ -69,6 +69,7 @@ ui <- fluidPage(
         # Show a plot of the generated distribution
         mainPanel(
           plotOutput("GraficoLinha"),
+          plotOutput("GraficoBoxplot"),
            tableOutput("TabelaDados")
         )
     )
@@ -94,6 +95,11 @@ server <- function(input, output) {
     output$GraficoLinha <- renderPlot({
       ggplot(dados_filtrados(), aes(x=year, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())])) +
         geom_line() + labs(title="Grafico de linha:", x = "Ano", y = "Causa da morte")
+    })
+    
+    output$GraficoBoxplot <- renderPlot({
+      ggplot(dados_filtrados(), aes(x=year, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())])) +
+        geom_boxplot() + labs(title="Grafico de boxplot:", x = "Ano", y = "Causa da morte")
     })
     
     output$TabelaDados <- renderTable(tabela())
