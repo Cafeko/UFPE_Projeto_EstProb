@@ -1,7 +1,9 @@
 # Bibliotecas:
 library(shiny)
+library(shinydashboard)
 library(dplyr)
 library(ggplot2)
+
 
 
 # Dados:
@@ -11,6 +13,7 @@ pais <- sort(unique(df$country))
 mortes <- colnames(df[c(-1,-2,-3)])
 mortes_alfabetica <- sort(mortes)
 mortes_alfabetica
+
 
 
 # Funções:
@@ -24,7 +27,7 @@ MontaTabela <- function(dados, morte_causa){
   dados_filtrados <- FiltraDados(dados, morte_causa)
   tabela <- data.frame(Classe = morte_causa,
                        Media = mean(dados_filtrados),
-                       Moda = getmode(c('Sem Moda', dados_filtrados)),
+                       Moda = getmode(FormataModa(dados_filtrados)),
                        Mediana = median(dados_filtrados),
                        Desvio_Padrao = sd(dados_filtrados),
                        Maximo = max(dados_filtrados),
@@ -51,29 +54,73 @@ ColunaMorte <- function(morte_causa) {
 }
 
 
-# UI:
-ui <- fluidPage(
 
-    # Application title
-    titlePanel("Numero de mortes"),
+# Dashboard:
+cabecalho <- dashboardHeader(title = 'Mortes por causa')
 
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-          selectInput('idPais', 'País:', choices = pais, selected = 'Brazil'),
-          selectInput('idMortes', 'Causa de mortes:', choices = mortes_alfabetica, selected = 'road_injuries'),
-          sliderInput('idAnos', 'Anos:', min = min(anos), max = max(anos), value = c(min(anos), max(anos)), sep = ""),
-          actionButton('idBotaoFiltro', 'Filtrar')
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-          plotOutput("GraficoLinha"),
-          plotOutput("GraficoBoxplot"),
-           tableOutput("TabelaDados")
-        )
-    )
+barra_lateral <- dashboardSidebar(
+  sidebarMenu(
+    menuItem('Analisa classe', tabName = '1classe'),
+    menuItem('Compara Classes', tabName = '2classes') 
+  )
 )
+
+corpo <- dashboardBody(
+  tabItems(
+    tabItem(tabName = '1classe', 
+      fluidRow(
+        column(width = 12,
+          box(width = '100%',
+            column(
+              width = 6,
+              selectInput('idPais', 'País:', choices = pais, selected = 'Brazil')
+            ),
+            column(
+              width = 6,
+              selectInput('idMortes', 'Causa de mortes:', choices = mortes_alfabetica, selected = 'road_injuries')
+            ),
+            column(
+              width = 12,
+              sliderInput('idAnos', 'Anos:', min = min(anos), max = max(anos), value = c(min(anos), max(anos)), sep = "", width = '100%', step = 1)
+            ),
+            column(width = 12, actionButton('idBotaoFiltro', 'Filtrar'))
+          )
+        )
+      ),
+      fluidRow(
+        column(width = 12,
+          box(width = '100%',
+            column(width = 8, plotOutput("GraficoLinha")),
+            column(width = 4, plotOutput("GraficoBoxplot"))
+          )
+        )
+      ),
+      fluidRow(
+        column(width = 12,
+          box(width = '100%',
+            column(width = 12, align = 'center',tableOutput("TabelaDados"))
+          )
+        )
+      )
+    ),
+    tabItem(tabName = '2classes',
+      fluidRow(
+        column(width = 12,
+          box(width = '100%',
+            column(width = 12,
+            
+            )
+          )
+        )
+      )
+    ) 
+  )
+)
+
+
+
+# UI:
+ui <- dashboardPage(header = cabecalho, sidebar = barra_lateral, body = corpo)
 
 # Server:
 server <- function(input, output) {
