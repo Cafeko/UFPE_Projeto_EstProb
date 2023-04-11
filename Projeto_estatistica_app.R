@@ -17,40 +17,57 @@ mortes_alfabetica
 
 
 # Funções:
-FiltraDados <- function(dados, morte_causa){
-  dados_filtrados <- dados[, ColunaMorte(morte_causa)]
-  
-  return(dados_filtrados)
+ColunaMorte <- function(morte_causa) {
+  return(3 + which(mortes == morte_causa))
 }
 
-MontaTabela <- function(dados, morte_causa){
-  dados_filtrados <- FiltraDados(dados, morte_causa)
-  tabela <- data.frame(Classe = morte_causa,
-                       Media = mean(dados_filtrados),
-                       Moda = getmode(FormataModa(dados_filtrados)),
-                       Mediana = median(dados_filtrados),
-                       Desvio_Padrao = sd(dados_filtrados),
-                       Maximo = max(dados_filtrados),
-                       Minimo = min(dados_filtrados))
+MontaTabela1Classe <- function(dados, morte_causa){
+  paises <- c(unique(dados$country))
+  coluna <- ColunaMorte(morte_causa)
+  
+  pais_tabela <- c()
+  morte_tabela <- c()
+  media_tabela <- c()
+  moda_tabela <- c()
+  mediana_tabela <- c()
+  desvio_tabela <- c()
+  min_tabela <- c()
+  max_tabela <- c()
+  for (p in paises){
+    pais_tabela <- c(pais_tabela, p)
+    morte_tabela <- c(morte_tabela, morte_causa)
+    media_tabela <- c(media_tabela, mean(dados[dados$country == p, coluna]))
+    moda_tabela <- c(moda_tabela, getmode(FormataModa(dados[dados$country == p, coluna])))
+    mediana_tabela <- c(mediana_tabela, median(dados[dados$country == p, coluna]))
+    desvio_tabela <- c(desvio_tabela, sd(dados[dados$country == p, coluna]))
+    min_tabela <- c(min_tabela, min(dados[dados$country == p, coluna]))
+    max_tabela <- c(max_tabela, max(dados[dados$country == p, coluna]))
+  }
+  tabela <- data.frame(
+    País = pais_tabela,
+    Classe = morte_tabela,
+    Media = media_tabela,
+    Moda = moda_tabela,
+    Mediana = mediana_tabela,
+    Desvio_Padrao = desvio_tabela,
+    Maximo = max_tabela,
+    Minimo = min_tabela
+  )
   return(tabela)
-}
+} 
 
 getmode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
 }
 
-FormataModa <- function(dados) {
-  if (length(dados) > 1) {
-    return(c('Sem Moda', dados))
+FormataModa <- function(dados_analise) {
+  if (length(dados_analise) > 1) {
+    return(c('Sem Moda', dados_analise))
   }
   else {
-    return(dados)
+    return(dados_analise)
   }
-}
-
-ColunaMorte <- function(morte_causa) {
-  return(3 + which(mortes == morte_causa))
 }
 
 
@@ -73,7 +90,7 @@ corpo <- dashboardBody(
           box(width = '100%',
             column(
               width = 6,
-              selectInput('idPais', 'País:', choices = pais, selected = 'Brazil')
+              selectizeInput('idPais', 'País:', options = list(maxItems = 5), choices = pais, selected = 'Brazil')
             ),
             column(
               width = 6,
@@ -90,8 +107,8 @@ corpo <- dashboardBody(
       fluidRow(
         column(width = 12,
           box(width = '100%',
-            column(width = 8, plotOutput("GraficoLinha")),
-            column(width = 4, plotOutput("GraficoBoxplot"))
+            column(width = 7, plotOutput("GraficoLinha")),
+            column(width = 5, plotOutput("GraficoBoxplot"))
           )
         )
       ),
@@ -107,12 +124,18 @@ corpo <- dashboardBody(
       fluidRow(
         column(width = 12,
           box(width = '100%',
-            column(width = 12,
-            
-            )
+            column(
+              width = 12,
+              selectInput('idPaisCompara', 'País:', choices = pais, selected = 'Brazil')
+            ),
+            column(
+              width = 12,
+              sliderInput('idAnosCompara', 'Anos:', min = min(anos), max = max(anos), value = c(min(anos), max(anos)), sep = "", width = '100%', step = 1)
+            ),
+            column(width = 12, actionButton('idBotaoFiltro', 'Filtrar'))
           )
         )
-      )
+      ),
     ) 
   )
 )
@@ -125,7 +148,7 @@ ui <- dashboardPage(header = cabecalho, sidebar = barra_lateral, body = corpo)
 # Server:
 server <- function(input, output) {
     dados_filtrados <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
-      return(df[df$country == input$idPais & df$year >= input$idAnos[1] & df$year <= input$idAnos[2],])
+      return(df[(df$country %in% input$idPais) & df$year >= input$idAnos[1] & df$year <= input$idAnos[2],])
     })
     
     Morte_selecionado <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
@@ -135,18 +158,19 @@ server <- function(input, output) {
     ano_inicio <- reactive(input$idAnoInicio)
 
     tabela <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
-        MontaTabela(dados_filtrados(), input$idMortes)
+      MontaTabela1Classe(dados_filtrados(), input$idMortes)
     })
 
         
     output$GraficoLinha <- renderPlot({
-      ggplot(dados_filtrados(), aes(x=year, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())])) +
-        geom_line() + labs(title="Grafico de linha:", x = "Ano", y = "Causa da morte")
+      ggplot(dados_filtrados(), aes(x=year, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())], group = country, color = country)) +
+        geom_line(size = 2) + labs(title="Grafico de linha:", x = "Anos", y = "Numero de mortes")
     })
     
     output$GraficoBoxplot <- renderPlot({
-      ggplot(dados_filtrados(), aes(x=year, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())])) +
-        geom_boxplot() + labs(title="Grafico de boxplot:", x = "Ano", y = "Causa da morte")
+      ggplot(dados_filtrados(), aes(x=country, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())], group = country, color = country)) +
+        geom_boxplot() + labs(title="Grafico de boxplot:", x = "País", y = "Numero de mortes") +
+        theme(axis.text.x=element_blank())
     })
     
     output$TabelaDados <- renderTable(tabela())
