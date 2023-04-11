@@ -54,6 +54,49 @@ MontaTabela1Classe <- function(dados, morte_causa){
     Minimo = min_tabela
   )
   return(tabela)
+}
+
+MontaTabela2Classes <- function(dados, morte_causas){
+  pais <- c(unique(dados$country))
+  causas <- morte_causas
+  
+  pais_tabela <- c()
+  morte_tabela <- c()
+  media_tabela <- c()
+  moda_tabela <- c()
+  mediana_tabela <- c()
+  desvio_tabela <- c()
+  min_tabela <- c()
+  max_tabela <- c()
+  correlacao_valor1 <- dados[, ColunaMorte(causas[1])]
+  correlacao_valor2 <- NULL
+  for (c in causas){
+    pais_tabela <- c(pais_tabela, pais)
+    morte_tabela <- c(morte_tabela, c)
+    media_tabela <- c(media_tabela, mean(dados[dados$country == pais, ColunaMorte(c)]))
+    moda_tabela <- c(moda_tabela, getmode(FormataModa(dados[dados$country == pais, ColunaMorte(c)])))
+    mediana_tabela <- c(mediana_tabela, median(dados[dados$country == pais, ColunaMorte(c)]))
+    desvio_tabela <- c(desvio_tabela, sd(dados[dados$country == pais, ColunaMorte(c)]))
+    min_tabela <- c(min_tabela, min(dados[dados$country == pais, ColunaMorte(c)]))
+    max_tabela <- c(max_tabela, max(dados[dados$country == pais, ColunaMorte(c)]))
+    correlacao_valor2 <- dados[, ColunaMorte(c)]
+  }
+  
+  correlacao <- cor(correlacao_valor1, correlacao_valor2)
+  correlacao_tabela <- c(correlacao, correlacao)
+  
+  tabela <- data.frame(
+    País = pais_tabela,
+    Classe = morte_tabela,
+    Media = media_tabela,
+    Moda = moda_tabela,
+    Mediana = mediana_tabela,
+    Desvio_Padrao = desvio_tabela,
+    Maximo = max_tabela,
+    Minimo = min_tabela,
+    Correlação = correlacao_tabela
+  )
+  return(tabela)
 } 
 
 getmode <- function(v) {
@@ -157,6 +200,15 @@ corpo <- dashboardBody(
             column(width = 12, plotOutput("GraficoLinhaCompara"))
           )
         )
+      ),
+      
+      # Tabela:
+      fluidRow(
+        column(width = 12,
+          box(width = '100%',
+            column(width = 12, align = 'center',tableOutput("TabelaDadosCompara"))
+          )
+        )
       )
     ) 
   )
@@ -200,7 +252,11 @@ server <- function(input, output) {
     
     # Pagina 2:
     dados_filtrados_compara <- eventReactive(input$idBotaoFiltroCompara, ignoreNULL = FALSE, {
-      dados <- df[(df$country %in% input$idPaisCompara) & df$year >= input$idAnosCompara[1] & df$year <= input$idAnosCompara[2],]
+      return(df[(df$country %in% input$idPaisCompara) & df$year >= input$idAnosCompara[1] & df$year <= input$idAnosCompara[2],])
+    })
+    
+    dados_filtrados_Formatados <- eventReactive(input$idBotaoFiltroCompara, ignoreNULL = FALSE, {
+      dados <- dados_filtrados_compara()
       
       pais <- c()
       ano <- c()
@@ -223,12 +279,20 @@ server <- function(input, output) {
       return(dados_formatados)
     })
     
+    tabela2 <- eventReactive(input$idBotaoFiltroCompara, ignoreNULL = FALSE, {
+      MontaTabela2Classes(dados_filtrados_compara(), input$idMortesCompara)
+    })
+    
     
     output$GraficoLinhaCompara <- renderPlot({
-      ggplot(dados_filtrados_compara(), aes(x=Ano, y=Numeros, group = Classe, color = Classe)) +
+      ggplot(dados_filtrados_Formatados(), aes(x=Ano, y=Numeros, group = Classe, color = Classe)) +
         geom_line(size = 2) + labs(title="Grafico de linha:", x = "Anos", y = "Numero de mortes")
     })
+    
+    output$TabelaDadosCompara <- renderTable(tabela2())
 }
+
+
 
 # Executa o app:
 shinyApp(ui = ui, server = server)
