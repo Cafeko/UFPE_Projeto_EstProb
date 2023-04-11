@@ -84,7 +84,9 @@ barra_lateral <- dashboardSidebar(
 
 corpo <- dashboardBody(
   tabItems(
-    tabItem(tabName = '1classe', 
+    # Pagina 1:
+    tabItem(tabName = '1classe',
+      # Filtros:
       fluidRow(
         column(width = 12,
           box(width = '100%',
@@ -104,6 +106,8 @@ corpo <- dashboardBody(
           )
         )
       ),
+      
+      # Graficos:
       fluidRow(
         column(width = 12,
           box(width = '100%',
@@ -112,6 +116,8 @@ corpo <- dashboardBody(
           )
         )
       ),
+      
+      # Tabela:
       fluidRow(
         column(width = 12,
           box(width = '100%',
@@ -120,22 +126,38 @@ corpo <- dashboardBody(
         )
       )
     ),
+    
+    # Pagina 2:
     tabItem(tabName = '2classes',
+      # Filtros:
       fluidRow(
         column(width = 12,
           box(width = '100%',
             column(
-              width = 12,
+              width = 6,
               selectInput('idPaisCompara', 'País:', choices = pais, selected = 'Brazil')
+            ),
+            column(
+              width = 6,
+              selectizeInput('idMortesCompara', 'Causa de mortes:', options = list(maxItems = 2), choices = mortes_alfabetica, selected = 'road_injuries')
             ),
             column(
               width = 12,
               sliderInput('idAnosCompara', 'Anos:', min = min(anos), max = max(anos), value = c(min(anos), max(anos)), sep = "", width = '100%', step = 1)
             ),
-            column(width = 12, actionButton('idBotaoFiltro', 'Filtrar'))
+            column(width = 12, actionButton('idBotaoFiltroCompara', 'Filtrar'))
           )
         )
       ),
+      
+      # Graficos:
+      fluidRow(
+        column(width = 12,
+          box(width = '100%',
+            column(width = 12, plotOutput("GraficoLinhaCompara"))
+          )
+        )
+      )
     ) 
   )
 )
@@ -147,6 +169,7 @@ ui <- dashboardPage(header = cabecalho, sidebar = barra_lateral, body = corpo)
 
 # Server:
 server <- function(input, output) {
+  # Pagina 1:
     dados_filtrados <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
       return(df[(df$country %in% input$idPais) & df$year >= input$idAnos[1] & df$year <= input$idAnos[2],])
     })
@@ -154,13 +177,11 @@ server <- function(input, output) {
     Morte_selecionado <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
       return(input$idMortes)
     })
-    
-    ano_inicio <- reactive(input$idAnoInicio)
 
     tabela <- eventReactive(input$idBotaoFiltro, ignoreNULL = FALSE, {
       MontaTabela1Classe(dados_filtrados(), input$idMortes)
     })
-
+    
         
     output$GraficoLinha <- renderPlot({
       ggplot(dados_filtrados(), aes(x=year, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())], group = country, color = country)) +
@@ -174,6 +195,39 @@ server <- function(input, output) {
     })
     
     output$TabelaDados <- renderTable(tabela())
+    
+    
+    
+    # Pagina 2:
+    dados_filtrados_compara <- eventReactive(input$idBotaoFiltroCompara, ignoreNULL = FALSE, {
+      dados <- df[(df$country %in% input$idPaisCompara) & df$year >= input$idAnosCompara[1] & df$year <= input$idAnosCompara[2],]
+      
+      pais <- c()
+      ano <- c()
+      valor_morte <- c()
+      tipo_morte <- c()
+      for (m in c(1 : length(input$idMortesCompara))){
+        for (i in c(1 : length(dados[, ColunaMorte(input$idMortesCompara[m])]))){
+          pais <- c(pais , dados[i, 1])
+          ano <- c(ano , dados[i, 3])
+          valor_morte <- c(valor_morte , dados[i, ColunaMorte(input$idMortesCompara[m])])
+          tipo_morte <- c(tipo_morte, input$idMortesCompara[m])
+        }
+      }
+      dados_formatados <- data.frame(
+                          País = pais,
+                          Ano = ano,
+                          Numeros = valor_morte,
+                          Classe = tipo_morte
+      )
+      return(dados_formatados)
+    })
+    
+    
+    output$GraficoLinhaCompara <- renderPlot({
+      ggplot(dados_filtrados_compara(), aes(x=Ano, y=Numeros, group = Classe, color = Classe)) +
+        geom_line(size = 2) + labs(title="Grafico de linha:", x = "Anos", y = "Numero de mortes")
+    })
 }
 
 # Executa o app:
