@@ -186,7 +186,7 @@ corpo <- dashboardBody(
             ),
             column(
               width = 6,
-              selectizeInput('idMortesCompara', 'Causa de mortes:', options = list(maxItems = 2), choices = mortes_alfabetica, selected = 'road_injuries')
+              selectizeInput('idMortesCompara', 'Causa de mortes (selecionar até 2):', options = list(maxItems = 2), choices = mortes_alfabetica, selected = 'road_injuries')
             ),
             column(
               width = 12,
