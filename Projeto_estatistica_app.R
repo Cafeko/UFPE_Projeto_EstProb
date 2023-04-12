@@ -138,7 +138,7 @@ corpo <- dashboardBody(
           box(width = '100%',
             column(
               width = 6,
-              selectizeInput('idPais', 'País:', options = list(maxItems = 5), choices = pais, selected = 'Brazil')
+              selectizeInput('idPais', 'País (selecionar até 5):', options = list(maxItems = 5), choices = pais, selected = 'Brazil')
             ),
             column(
               width = 6,
