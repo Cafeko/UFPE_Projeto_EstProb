@@ -83,7 +83,10 @@ MontaTabela2Classes <- function(dados, morte_causas){
   }
   
   correlacao <- cor(correlacao_valor1, correlacao_valor2)
-  correlacao_tabela <- c(correlacao, correlacao)
+  correlacao_tabela <- c(correlacao)
+  if( length(causas) > 1) {
+    correlacao_tabela <- c(correlacao_tabela, correlacao)
+  }
   
   tabela <- data.frame(
     País = pais_tabela,
@@ -135,7 +138,7 @@ corpo <- dashboardBody(
           box(width = '100%',
             column(
               width = 6,
-              selectizeInput('idPais', 'País:', options = list(maxItems = 5), choices = pais, selected = 'Brazil')
+              selectizeInput('idPais', 'País:', options = list(maxItems = 2), choices = pais, selected = 'Brazil')
             ),
             column(
               width = 6,
@@ -197,7 +200,8 @@ corpo <- dashboardBody(
       fluidRow(
         column(width = 12,
           box(width = '100%',
-            column(width = 12, plotOutput("GraficoLinhaCompara"))
+            column(width = 7, plotOutput("GraficoLinhaCompara")),
+            column(width = 5, plotOutput("GraficoBarra"))
           )
         )
       ),
@@ -242,8 +246,7 @@ server <- function(input, output) {
     
     output$GraficoBoxplot <- renderPlot({
       ggplot(dados_filtrados(), aes(x=country, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())], group = country, color = country)) +
-        geom_boxplot() + labs(title="Grafico de boxplot:", x = "País", y = "Numero de mortes") +
-        theme(axis.text.x=element_blank())
+        geom_boxplot() + labs(title="Grafico de boxplot:", x = "País", y = "Numero de mortes") + theme(axis.text.x=element_blank())
     })
     
     output$TabelaDados <- renderTable(tabela())
@@ -287,6 +290,12 @@ server <- function(input, output) {
     output$GraficoLinhaCompara <- renderPlot({
       ggplot(dados_filtrados_Formatados(), aes(x=Ano, y=Numeros, group = Classe, color = Classe)) +
         geom_line(size = 2) + labs(title="Grafico de linha:", x = "Anos", y = "Numero de mortes")
+    })
+    
+    output$GraficoBarra <- renderPlot({
+      ggplot(tabela2(), aes(x=Classe, y=Media, group = Classe, color = Classe, fill=Classe)) +
+        geom_bar(stat = "identity") + labs(title="Grafico de barra:", x = "Morte", y = "Media de mortes") +
+        theme(legend.position="none")
     })
     
     output$TabelaDadosCompara <- renderTable(tabela2())
