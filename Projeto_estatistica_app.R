@@ -123,7 +123,7 @@ cabecalho <- dashboardHeader(title = 'Mortes por causa')
 
 barra_lateral <- dashboardSidebar(
   sidebarMenu(
-    menuItem('Analisa classe', tabName = '1classe'),
+    menuItem('Analisa Classe', tabName = '1classe'),
     menuItem('Compara Classes', tabName = '2classes') 
   )
 )
@@ -138,7 +138,7 @@ corpo <- dashboardBody(
           box(width = '100%',
             column(
               width = 6,
-              selectizeInput('idPais', 'País:', options = list(maxItems = 2), choices = pais, selected = 'Brazil')
+              selectizeInput('idPais', 'País:', options = list(maxItems = 5), choices = pais, selected = 'Brazil')
             ),
             column(
               width = 6,
@@ -158,7 +158,8 @@ corpo <- dashboardBody(
         column(width = 12,
           box(width = '100%',
             column(width = 7, plotOutput("GraficoLinha")),
-            column(width = 5, plotOutput("GraficoBoxplot"))
+            column(width = 5, plotOutput("GraficoBoxplot")),
+            column(width = 12, plotOutput("GraficoScatterplot"))
           )
         )
       ),
@@ -247,6 +248,12 @@ server <- function(input, output) {
     output$GraficoBoxplot <- renderPlot({
       ggplot(dados_filtrados(), aes(x=country, y=dados_filtrados()[, ColunaMorte(Morte_selecionado())], group = country, color = country)) +
         geom_boxplot() + labs(title="Grafico de boxplot:", x = "País", y = "Numero de mortes") + theme(axis.text.x=element_blank())
+    })
+    
+    output$GraficoScatterplot <- renderPlot({
+      ggplot(dados_filtrados(), aes(x = dados_filtrados()[, ColunaMorte(Morte_selecionado())], y = country, color = country)) +
+        geom_point(size = 3) + labs(title="Grafico Scatterplot:", x = Morte_selecionado(), y = 'País') +
+        theme_minimal()
     })
     
     output$TabelaDados <- renderTable(tabela())
